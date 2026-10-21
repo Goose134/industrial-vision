@@ -1,0 +1,25 @@
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# Virtual environment
+.venv/
+venv/
+
+# PyCharm
+.idea/
+
+# Temporary files and logs
+*.log
+logs/
+
+# Large files
+*.mp4
+*.avi
+*.pt
+*.pth
+*.onnx
+
+# Local secrets
+.env

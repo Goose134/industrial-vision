@@ -1,0 +1,31 @@
+
+# Настройки источника видеопотока
+camera:
+  id: "cam_01"
+  source: "data/test_video.mp4"
+  reconnect_sec: 2
+
+# Настройки нейросетевых моделей
+models:
+  detector_path: "models/detector.pt"
+  person_confidence: 0.50
+  fire_confidence: 0.65
+
+# Контролируемые зоны
+zones:
+  restricted_01:
+    - [0.15, 0.20]
+    - [0.85, 0.20]
+    - [0.90, 0.90]
+    - [0.10, 0.90]
+
+# Настройки формирования событий
+events:
+  confirmation_n: 3
+  confirmation_m: 5
+  cooldown_sec: 10
+
+# Настройки хранения событий
+storage:
+  root: "events"
+  retention_days: 30

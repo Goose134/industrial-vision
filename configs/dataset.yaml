@@ -1,0 +1,17 @@
+
+# Корневая папка набора данных
+path: datasets/ppe
+
+# Данные для обучения
+train: images/train
+
+# Данные для проверки при обучении
+val: images/val
+
+# Данные для итогового тестирования
+test: images/test
+
+# Классы объектов
+names:
+  0: helmet
+  1: vest

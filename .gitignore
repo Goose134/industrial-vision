@@ -23,4 +23,5 @@ logs/
 
 # Local secrets
 .env
+datasets/
 runs/

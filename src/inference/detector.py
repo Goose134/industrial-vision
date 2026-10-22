@@ -6,21 +6,21 @@ from .types import Detection
 
 class Detector:
     """
-    Класс для обнаружения людей и транспорта.
+    Модуль обнаружения и отслеживания объектов.
     """
 
-    def __init__(self, model_path, confidence=0.5, image_size=640):
+    def __init__(self, model_path, confidence=0.35, image_size=640):
 
-        # Загружаем предварительно обученную модель
+        # Загружаем модель нейросети
         self.model = YOLO(model_path)
 
-        # Минимальная уверенность детекции
+        # Порог уверенности модели
         self.confidence = confidence
 
-        # Размер изображения для нейросети
+        # Размер входного изображения
         self.image_size = image_size
 
-        # Классы объектов, которые нас интересуют
+        # Классы людей и транспорта
         self.target_classes = {
             "person",
             "car",
@@ -31,10 +31,9 @@ class Detector:
 
     def predict(self, frame):
         """
-        Принимает изображение и возвращает список объектов.
+        Обычное обнаружение объектов без tracking.
+        Сохраняем для совместимости с прошлым этапом.
         """
-
-        # Передаём кадр нейросети
         result = self.model.predict(
             source=frame,
             conf=self.confidence,
@@ -42,35 +41,61 @@ class Detector:
             verbose=False
         )[0]
 
-        # Названия классов модели
-        names = result.names
+        return self._convert_results(result)
 
-        # Список обнаруженных объектов
+    def track(self, frame):
+        """
+        Обнаружение и отслеживание объектов.
+        """
+
+        result = self.model.track(
+            source=frame,
+            persist=True,
+            tracker="bytetrack.yaml",
+            conf=self.confidence,
+            imgsz=self.image_size,
+            verbose=False
+        )[0]
+
+        return self._convert_results(result)
+
+    def _convert_results(self, result):
+        """
+        Преобразует результат YOLO в наши Detection.
+        """
+
         detections = []
 
-        # Перебираем прямоугольники обнаруженных объектов
+        # Если прямоугольников нет, возвращаем пустой список
+        if result.boxes is None:
+            return detections
+
+        names = result.names
+
         for box in result.boxes:
 
-            # Получаем ID класса
             class_id = int(box.cls.item())
-
-            # Название класса
             class_name = str(names[class_id])
 
             # Пропускаем ненужные классы
             if class_name not in self.target_classes:
                 continue
 
-            # Уверенность модели
             confidence = float(box.conf.item())
 
-            # Координаты прямоугольника
+            # Координаты объекта
             x1, y1, x2, y2 = map(
                 int,
                 box.xyxy[0].tolist()
             )
 
-            # Создаём объект Detection
+            # По умолчанию идентификатор отсутствует
+            track_id = None
+
+            # Проверяем, выдал ли трекер идентификатор
+            if box.id is not None:
+                track_id = int(box.id.item())
+
             detection = Detection(
                 class_id=class_id,
                 class_name=class_name,
@@ -78,10 +103,10 @@ class Detector:
                 x1=x1,
                 y1=y1,
                 x2=x2,
-                y2=y2
+                y2=y2,
+                track_id=track_id
             )
 
-            # Добавляем объект в список
             detections.append(detection)
 
         return detections

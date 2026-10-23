@@ -17,6 +17,8 @@ from src.zones.geometry import (
 
 from src.events.zone_events import ZoneEventLogic
 
+from src.ppe.ppe_detector import PPEDetector
+from src.events.ppe_events import PPEEventLogic
 
 def main():
 
@@ -63,6 +65,25 @@ def main():
         cooldown_sec=event_config["cooldown_sec"]
     )
 
+    # Получаем настройки PPE из configuration.yaml
+    ppe_config = config["ppe"]
+
+    # Путь к нашей обученной модели
+    ppe_model_path = project_root / ppe_config["model_path"]
+
+    # Создаём детектор касок и жилетов
+    ppe_detector = PPEDetector(
+        model_path=ppe_model_path,
+        confidence=ppe_config["confidence"],
+        min_person_height=ppe_config["min_person_height"]
+    )
+
+    # Создаём обработчик PPE-событий
+    ppe_event_logic = PPEEventLogic(
+        confirmation_sec=ppe_config["confirmation_sec"]
+    )
+
+
     # Счётчик FPS
     fps_meter = FPSMeter(window=30)
 
@@ -95,6 +116,7 @@ def main():
             # Идентификаторы людей внутри зоны
             objects_in_zone = set()
 
+            original_frame = frame.copy()
             for det in detections:
 
                 # Получаем координаты объекта
@@ -165,6 +187,55 @@ def main():
                     color,
                     -1
                 )
+
+                # Проверяем PPE только у людей с Track ID
+                if det.class_name == "person" and det.track_id is not None:
+
+                    # Передаём исходный кадр и человека PPE-модели
+                    ppe_result = ppe_detector.check_person(
+                        original_frame,
+                        det
+                    )
+
+                    # Если человек достаточно крупный
+                    if ppe_result is not None:
+
+                        # Передаём результат в Event Logic
+                        ppe_events = ppe_event_logic.update(
+                            track_id=det.track_id,
+                            helmet_missing=ppe_result["helmet_missing"],
+                            vest_missing=ppe_result["vest_missing"]
+                        )
+
+                        # Выводим подтверждённые события
+                        for event in ppe_events:
+                            print(
+                                f"[EVENT] {event['event_type']} "
+                                f"Track ID: {event['track_id']}"
+                            )
+
+                        # Рисуем каски и жилеты
+                        for helmet in ppe_result["helmets"]:
+                            hx1, hy1, hx2, hy2 = helmet["bbox"]
+
+                            cv2.rectangle(
+                                frame,
+                                (hx1, hy1),
+                                (hx2, hy2),
+                                (0, 255, 0),
+                                2
+                            )
+
+                        for vest in ppe_result["vests"]:
+                            vx1, vy1, vx2, vy2 = vest["bbox"]
+
+                            cv2.rectangle(
+                                frame,
+                                (vx1, vy1),
+                                (vx2, vy2),
+                                (255, 255, 0),
+                                2
+                            )
 
             # Передаём данные в Event Logic
             new_events = event_logic.update(objects_in_zone)

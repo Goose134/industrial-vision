@@ -2,7 +2,7 @@
 # Настройки источника видеопотока
 camera:
   id: "cam_01"
-  source: "data/test_video.mp4"
+  source: "data/ppe_test.mp4"
   reconnect_sec: 2
 
 # Настройки нейросетевых моделей
@@ -15,9 +15,9 @@ models:
 # Контролируемые зоны
 zones:
   restricted_01:
-    - [0.15, 0.20]
-    - [0.85, 0.20]
-    - [0.90, 0.90]
+    - [0.30, 0.45]
+    - [0.98, 0.45]
+    - [0.95, 0.90]
     - [0.10, 0.90]
 
 # Настройки формирования событий
@@ -30,3 +30,9 @@ events:
 storage:
   root: "events"
   retention_days: 30
+
+ppe:
+  model_path: "runs/ppe/experiment_01/weights/best.pt"
+  confidence: 0.35
+  min_person_height: 120
+  confirmation_sec: 3.0

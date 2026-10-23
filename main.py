@@ -20,6 +20,9 @@ from src.events.zone_events import ZoneEventLogic
 from src.ppe.ppe_detector import PPEDetector
 from src.events.ppe_events import PPEEventLogic
 
+from src.fire_smoke.fire_detector import FireSmokeDetector
+from src.events.fire_events import FireSmokeEventLogic
+
 def main():
 
     # Корневая папка проекта
@@ -84,8 +87,29 @@ def main():
     )
 
 
+    # Загружаем настройки обнаружения огня и дыма
+    fire_config = config["fire_smoke"]
+
+    # Путь к специализированной модели
+    fire_model_path = (
+        project_root / fire_config["model_path"]
+    )
+
+    # Создаём детектор огня и дыма
+    fire_detector = FireSmokeDetector(
+        model_path=fire_model_path,
+        confidence=fire_config["confidence"],
+        image_size=fire_config["image_size"]
+    )
+
+    # Создаём обработчик событий пожара
+    fire_event_logic = FireSmokeEventLogic(
+        confirmation_sec=fire_config["confirmation_sec"]
+    )
+
     # Счётчик FPS
     fps_meter = FPSMeter(window=30)
+
 
     try:
         video.open()
@@ -112,6 +136,9 @@ def main():
 
             # Запускаем детекцию и tracking
             detections = detector.track(frame)
+
+            # Анализируем кадр на наличие огня и дыма
+            fire_detections = fire_detector.detect(frame)
 
             # Идентификаторы людей внутри зоны
             objects_in_zone = set()
@@ -245,6 +272,69 @@ def main():
                 print(
                     f"[EVENT] {event['event_type']} "
                     f"Track ID: {event['track_id']}"
+                )
+
+            # Проверяем, обнаружены ли огонь и дым
+            has_fire = any(
+                item["class_name"] == "fire"
+                for item in fire_detections
+            )
+
+            has_smoke = any(
+                item["class_name"] == "smoke"
+                for item in fire_detections
+            )
+
+            # Обновляем события огня и дыма
+            fire_events = fire_event_logic.update(
+                fire_detected=has_fire,
+                smoke_detected=has_smoke
+            )
+
+            # Выводим подтверждённые события
+            for event in fire_events:
+                print(
+                    f"[EVENT] {event['event_type']}"
+                )
+
+            # Отображаем обнаруженные опасности
+            for item in fire_detections:
+
+                class_name = item["class_name"]
+                confidence = item["confidence"]
+
+                x1, y1, x2, y2 = item["bbox"]
+
+                # Красный цвет для огня
+                if class_name == "fire":
+                    color = (0, 0, 255)
+
+                # Жёлтый цвет для дыма
+                else:
+                    color = (0, 255, 255)
+
+                # Рисуем Bounding Box
+                cv2.rectangle(
+                    frame,
+                    (x1, y1),
+                    (x2, y2),
+                    color,
+                    2
+                )
+
+                # Подписываем обнаружение
+                label = (
+                    f"{class_name}: {confidence:.2f}"
+                )
+
+                cv2.putText(
+                    frame,
+                    label,
+                    (x1, max(20, y1 - 10)),
+                    cv2.FONT_HERSHEY_SIMPLEX,
+                    0.7,
+                    color,
+                    2
                 )
 
             # Рисуем ROI поверх кадра

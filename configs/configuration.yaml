@@ -2,7 +2,7 @@
 # Настройки источника видеопотока
 camera:
   id: "cam_01"
-  source: "data/fire_test.mp4"
+  source: "data/spill_test.mp4"
   reconnect_sec: 2
 
 # Настройки нейросетевых моделей
@@ -39,6 +39,16 @@ ppe:
 
 fire_smoke:
   model_path: "models/fire_smoke/best.pt"
+  confidence: 0.35
+  image_size: 640
+  confirmation_sec: 3.0
+
+event_engine:
+  output_dir: "output"
+  save_evidence: true
+
+spills:
+  model_path: "runs/spills/experiment_01/weights/best.pt"
   confidence: 0.35
   image_size: 640
   confirmation_sec: 3.0

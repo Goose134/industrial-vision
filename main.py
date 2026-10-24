@@ -22,6 +22,10 @@ from src.events.ppe_events import PPEEventLogic
 
 from src.fire_smoke.fire_detector import FireSmokeDetector
 from src.events.fire_events import FireSmokeEventLogic
+from src.events.event_engine import EventEngine
+
+from src.spills.spill_detector import SpillDetector
+from src.events.spill_events import SpillEventLogic
 
 def main():
 
@@ -107,6 +111,34 @@ def main():
         confirmation_sec=fire_config["confirmation_sec"]
     )
 
+
+    # Создаём единую систему регистрации событий
+    event_engine = EventEngine(
+        project_root=project_root,
+        camera_id=camera_config.get("id", "cam_01")
+    )
+
+
+    # Настройки обнаружения разливов
+    spill_config = config["spills"]
+
+    # Путь к обученной модели
+    spill_model_path = (
+        project_root / spill_config["model_path"]
+    )
+
+    # Создаём детектор разливов
+    spill_detector = SpillDetector(
+        model_path=spill_model_path,
+        confidence=spill_config["confidence"],
+        image_size=spill_config["image_size"]
+    )
+
+    # Логика подтверждения события разлива
+    spill_event_logic = SpillEventLogic(
+        confirmation_sec=spill_config["confirmation_sec"]
+    )
+
     # Счётчик FPS
     fps_meter = FPSMeter(window=30)
 
@@ -139,6 +171,9 @@ def main():
 
             # Анализируем кадр на наличие огня и дыма
             fire_detections = fire_detector.detect(frame)
+
+            # Обнаруживаем разливы жидкостей
+            spill_detections = spill_detector.detect(frame)
 
             # Идентификаторы людей внутри зоны
             objects_in_zone = set()
@@ -234,12 +269,15 @@ def main():
                             vest_missing=ppe_result["vest_missing"]
                         )
 
-                        # Выводим подтверждённые события
+
+                        # Регистрируем нарушения PPE
                         for event in ppe_events:
-                            print(
-                                f"[EVENT] {event['event_type']} "
-                                f"Track ID: {event['track_id']}"
+                            event_engine.register(
+                                event_type=event["event_type"],
+                                frame=original_frame,
+                                track_id=event["track_id"]
                             )
+
 
                         # Рисуем каски и жилеты
                         for helmet in ppe_result["helmets"]:
@@ -267,12 +305,15 @@ def main():
             # Передаём данные в Event Logic
             new_events = event_logic.update(objects_in_zone)
 
-            # Выводим новые события в терминал
+
+            # Регистрируем события нарушения зоны
             for event in new_events:
-                print(
-                    f"[EVENT] {event['event_type']} "
-                    f"Track ID: {event['track_id']}"
+                event_engine.register(
+                    event_type=event["event_type"],
+                    frame=original_frame,
+                    track_id=event["track_id"]
                 )
+
 
             # Проверяем, обнаружены ли огонь и дым
             has_fire = any(
@@ -291,11 +332,14 @@ def main():
                 smoke_detected=has_smoke
             )
 
-            # Выводим подтверждённые события
+
+            # Регистрируем обнаружение дыма и огня
             for event in fire_events:
-                print(
-                    f"[EVENT] {event['event_type']}"
+                event_engine.register(
+                    event_type=event["event_type"],
+                    frame=original_frame
                 )
+
 
             # Отображаем обнаруженные опасности
             for item in fire_detections:
@@ -326,6 +370,51 @@ def main():
                 label = (
                     f"{class_name}: {confidence:.2f}"
                 )
+
+                cv2.putText(
+                    frame,
+                    label,
+                    (x1, max(20, y1 - 10)),
+                    cv2.FONT_HERSHEY_SIMPLEX,
+                    0.7,
+                    color,
+                    2
+                )
+
+
+            # Есть ли хотя бы один обнаруженный разлив?
+            has_spill = len(spill_detections) > 0
+
+            # Проверяем длительность обнаружения
+            spill_events = spill_event_logic.update(
+                spill_detected=has_spill
+            )
+
+            # Регистрируем подтверждённые события
+            for event in spill_events:
+                event_engine.register(
+                    event_type=event["event_type"],
+                    frame=original_frame
+                )
+
+            # Отображаем обнаруженные разливы
+            for item in spill_detections:
+                x1, y1, x2, y2 = item["bbox"]
+
+                confidence = item["confidence"]
+
+                # Фиолетовый цвет для разливов
+                color = (255, 0, 255)
+
+                cv2.rectangle(
+                    frame,
+                    (x1, y1),
+                    (x2, y2),
+                    color,
+                    2
+                )
+
+                label = f"spill: {confidence:.2f}"
 
                 cv2.putText(
                     frame,

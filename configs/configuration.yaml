@@ -2,7 +2,7 @@
 # Настройки источника видеопотока
 camera:
   id: "cam_01"
-  source: "data/spill_test.mp4"
+  source: "data/ppe_test.mp4"
   reconnect_sec: 2
 
 # Настройки нейросетевых моделей

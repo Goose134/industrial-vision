@@ -7,7 +7,7 @@ camera:
 
 # Настройки нейросетевых моделей
 models:
-  detector_path: "yolo26n.onnx"
+  detector_path: "models/detector/yolo26n.onnx"
   person_confidence: 0.35
   image_size: 320
 
@@ -31,7 +31,7 @@ storage:
   retention_days: 30
 
 ppe:
-  model_path: "runs/ppe/experiment_01/weights/best.pt"
+  model_path: "models/ppe/best.pt"
   confidence: 0.35
   min_person_height: 120
   confirmation_sec: 3.0
@@ -47,7 +47,7 @@ event_engine:
   save_evidence: true
 
 spills:
-  model_path: "runs/spills/experiment_01/weights/best.pt"
+  model_path: "models/spills/best.pt"
   confidence: 0.35
   image_size: 320
   confirmation_sec: 3.0

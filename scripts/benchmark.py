@@ -205,7 +205,7 @@ def main():
     results = []
 
     # Последовательно проверяем 4 конфигурации
-    for name in ("A", "B", "C", "D"):
+    for name in ("A",):
         result = run_benchmark(
             name,
             config,

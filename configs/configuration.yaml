@@ -2,15 +2,14 @@
 # Настройки источника видеопотока
 camera:
   id: "cam_01"
-  source: "data/ppe_test.mp4"
+  source: "data/spill_test.mp4"
   reconnect_sec: 2
 
 # Настройки нейросетевых моделей
 models:
-  detector_path: "yolo26n.pt"
+  detector_path: "yolo26n.onnx"
   person_confidence: 0.35
-  fire_confidence: 0.65
-  image_size: 640
+  image_size: 320
 
 # Контролируемые зоны
 zones:
@@ -40,7 +39,7 @@ ppe:
 fire_smoke:
   model_path: "models/fire_smoke/best.pt"
   confidence: 0.35
-  image_size: 640
+  image_size: 320
   confirmation_sec: 3.0
 
 event_engine:
@@ -50,5 +49,14 @@ event_engine:
 spills:
   model_path: "runs/spills/experiment_01/weights/best.pt"
   confidence: 0.35
-  image_size: 640
+  image_size: 320
   confirmation_sec: 3.0
+
+modules:
+  roi_enabled: false
+  ppe_enabled: false
+  fire_smoke_enabled: false
+  spills_enabled: true
+
+optimization:
+  extra_detection_interval: 3

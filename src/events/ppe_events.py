@@ -60,3 +60,24 @@ class PPEEventLogic:
                 self.active_violations.discard(key)
 
         return events
+
+    def remove_missing_tracks(self, active_track_ids):
+        """
+        Удаляет состояние PPE для людей,
+        которых больше нет в кадре.
+        """
+        active_track_ids = set(active_track_ids)
+
+        # Сбрасываем неподтверждённые нарушения
+        for key in list(self.violation_start):
+            track_id, event_type = key
+
+            if track_id not in active_track_ids:
+                del self.violation_start[key]
+
+        # Удаляем подтверждённые состояния
+        self.active_violations = {
+            key
+            for key in self.active_violations
+            if key[0] in active_track_ids
+        }

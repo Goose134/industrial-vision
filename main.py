@@ -389,65 +389,26 @@ def main():
                                 2
                             )
 
-                        # Удаляем PPE-рамки людей, которых больше нет в кадре
-                        active_track_ids = {
-                            det.track_id
-                            for det in detections
-                            if det.class_name == "person"
-                               and det.track_id is not None
-                        }
-
-                        for track_id in list(ppe_cache.keys()):
-                            if track_id not in active_track_ids:
-                                del ppe_cache[track_id]
-
-                        # Сбрасываем PPE-события исчезнувших людей
-                        if ppe_enabled:
-                            ppe_event_logic.remove_missing_tracks(
-                                active_track_ids
-                            )
-
-                        # Передаём результат в Event Logic
-                        ppe_events = ppe_event_logic.update(
-                            track_id=det.track_id,
-                            helmet_missing=ppe_result["helmet_missing"],
-                            vest_missing=ppe_result["vest_missing"]
-                        )
 
 
-                        # Регистрируем нарушения PPE
-                        for event in ppe_events:
-                            event_engine.register(
-                                event_type=event["event_type"],
-                                frame=original_frame,
-                                track_id=event["track_id"]
-                            )
+            # Очищаем данные PPE для людей, исчезнувших из кадра
+            if ppe_enabled:
+                active_track_ids = {
+                    det.track_id
+                    for det in detections
+                    if det.class_name == "person"
+                    and det.track_id is not None
+                }
 
+                # Удаляем старые рамки касок и жилетов
+                for track_id in list(ppe_cache.keys()):
+                    if track_id not in active_track_ids:
+                        del ppe_cache[track_id]
 
-                        # Рисуем каски и жилеты
-                        for helmet in ppe_result["helmets"]:
-                            hx1, hy1, hx2, hy2 = helmet["bbox"]
-
-                            cv2.rectangle(
-                                frame,
-                                (hx1, hy1),
-                                (hx2, hy2),
-                                (0, 165, 255),
-                                2
-                            )
-
-                        for vest in ppe_result["vests"]:
-                            vx1, vy1, vx2, vy2 = vest["bbox"]
-
-                            cv2.rectangle(
-                                frame,
-                                (vx1, vy1),
-                                (vx2, vy2),
-                                (255, 255, 0),
-                                2
-                            )
-
-
+                # Сбрасываем состояния нарушений исчезнувших людей
+                ppe_event_logic.remove_missing_tracks(
+                    active_track_ids
+                )
             # Проверяем события ROI, только если зона включена
             if roi_enabled:
 

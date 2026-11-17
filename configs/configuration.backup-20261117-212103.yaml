@@ -1,0 +1,79 @@
+camera:
+  id: cam_01
+  source: data/Firehouse.mp4
+  reconnect_sec: 2
+  latest_frame: true
+  read_timeout_sec: 0.5
+playback:
+  realtime_video: true
+  fallback_fps: 30
+models:
+  detector_path: models/unified/unified_clean640.onnx
+  detector_confidence: 0.05
+  image_size: 640
+  class_confidence:
+    person: 0.35
+    car: 0.2
+    truck: 0.5
+    bus: 0.5
+    motorcycle: 0.5
+    helmet: 0.25
+    vest: 0.25
+    fire: 0.05
+    smoke: 0.05
+    spill: 0.2
+zones:
+  restricted_01:
+  - - 0.3
+    - 0.45
+  - - 0.98
+    - 0.45
+  - - 0.95
+    - 0.9
+  - - 0.1
+    - 0.9
+events:
+  confirmation_n: 3
+  confirmation_m: 5
+  cooldown_sec: 10
+storage:
+  root: events
+  retention_days: 30
+event_engine:
+  output_dir: output
+  save_evidence: true
+ppe:
+  min_person_height: 60
+  confirmation_sec: 3.0
+  show_unassigned: false
+fire_smoke:
+  confirmation_sec: 5.0
+spills:
+  confirmation_sec: 1.0
+modules:
+  roi_enabled: false
+  ppe_enabled: false
+  fire_smoke_enabled: true
+  spills_enabled: false
+tracking:
+  vehicle_nms_enabled: true
+  vehicle_nms_iou: 0.6
+  vehicle_nms_debug: false
+  class_nms_enabled: true
+  class_nms_debug: false
+  class_nms_iou:
+    fire: 0.05
+    smoke: 0.05
+    spill: 0.5
+    helmet: 0.65
+    vest: 0.65
+    person: 0.55
+  stabilize_vehicle_classes: true
+  vehicle_class_window: 5
+  vehicle_class_switch_votes: 3
+  vehicle_class_forget_frames: 60
+visual_smoothing:
+  enabled: true
+  person_alpha: 0.65
+  ppe_alpha: 0.55
+  ppe_hold_frames: 3

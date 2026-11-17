@@ -48,6 +48,8 @@ class FireSmokeDetector:
             conf=self.confidence,
             imgsz=self.image_size,
             device=self.device,
+            iou=0.0,
+            agnostic_nms=False,
             verbose=False
         )[0]
 

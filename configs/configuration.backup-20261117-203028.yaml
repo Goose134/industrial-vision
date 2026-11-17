@@ -1,0 +1,105 @@
+# Источник видеопотока
+camera:
+  id: "cam_01"
+  source: "data/Firehouse.mp4"
+  reconnect_sec: 2
+  latest_frame: true     # для веб-камер и RTSP: брать наиболее свежий кадр
+  read_timeout_sec: 0.5  # ожидание следующего кадра камеры (секунды)
+
+# Скорость воспроизведения локальных видеофайлов
+playback:
+  realtime_video: true   # true = скорость исходного файла; false = максимум FPS
+  fallback_fps: 30       # только если видеофайл не сообщает свой FPS
+
+# Одна ONNX-модель на 10 классов
+models:
+  detector_path: "models/unified/unified_clean640.onnx"
+  detector_confidence: 0.10     # Общий нижний порог YOLO (не выше любого из порогов ниже)
+  image_size: 640
+
+  # Независимые минимальные значения confidence для каждого класса
+  class_confidence:
+    person: 0.35
+    car: 0.20
+    truck: 0.50
+    bus: 0.50
+    motorcycle: 0.50
+    helmet: 0.25       # поднять, если слишком много ложных касок
+    vest: 0.25         # снизили для чувствительности небольших СИЗ
+    fire: 0.15
+    smoke: 0.10
+    spill: 0.20
+
+# Контролируемая зона
+zones:
+  restricted_01:
+    - [0.30, 0.45]
+    - [0.98, 0.45]
+    - [0.95, 0.90]
+    - [0.10, 0.90]
+
+# Подтверждение событий ROI
+events:
+  confirmation_n: 3
+  confirmation_m: 5
+  cooldown_sec: 10
+
+# Сохранение событий
+storage:
+  root: "events"
+  retention_days: 30
+
+event_engine:
+  output_dir: "output"
+  save_evidence: true
+
+# Настройки логики событий; пороги классов теперь в models.class_confidence
+ppe:
+  min_person_height: 60
+  confirmation_sec: 3.0
+  show_unassigned: false # true для диагностики неназначенных касок и жилетов
+
+fire_smoke:
+  confirmation_sec: 5.0
+
+spills:
+  confirmation_sec: 1.0
+
+# Можно отключать отображение/события, но общая модель всё равно одна
+modules:
+  roi_enabled: true
+  ppe_enabled: true
+  fire_smoke_enabled: true
+  spills_enabled: true
+
+# Стабилизация названия транспорта между кадрами (не влияет на работу нейросети)
+tracking:
+  # Удаление дублирующихся рамок car/truck/bus/motorcycle до ByteTrack.
+  vehicle_nms_enabled: true
+  vehicle_nms_iou: 0.60        # начать с 0.60; ниже = агрессивнее удаление
+  vehicle_nms_debug: false    # true = печатать сведения об удалённых дубликатах
+
+  # Дополнительный NMS для остальных классов (каждый класс САМ ПО СЕБЕ).
+  # Важно: fire и smoke НЕ подавляют друг друга;
+  # helmet и vest НЕ подавляют person.
+  class_nms_enabled: true
+  class_nms_debug: false
+  class_nms_iou:
+    fire: 0.01
+    smoke: 0.01
+    spill: 0.50
+    helmet: 0.65
+    vest: 0.65
+    person: 0.55    # удаляет вторую рамку одного человека, не затрагивая PPE
+
+  stabilize_vehicle_classes: true
+  vehicle_class_window: 5          # сколько последних кадров учитывать
+  vehicle_class_switch_votes: 3    # сколько голосов нужно для смены класса
+  vehicle_class_forget_frames: 60  # забываем Track ID после долгого отсутствия
+
+# Сглаживание только отображения людей и СИЗ; без запуска дополнительной YOLO
+visual_smoothing:
+  enabled: true
+  person_alpha: 0.65     # 1.0 = без сглаживания; меньше = плавнее, но больше запаздывание
+  ppe_alpha: 0.55
+  ppe_hold_frames: 3     # кеш каски/жилета на 3 кадра при краткой потере
